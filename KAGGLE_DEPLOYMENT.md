@@ -10,6 +10,19 @@
 
 ## 🎯 **SIMPLE 2-STEP PROCESS**
 
+### **Step 0: Clone Repository (Run ONCE)**
+```python
+# Cell 0: Clone the repository
+!git clone https://github.com/zakir0101/deepseek-ocr-kaggle.git
+%cd deepseek-ocr-kaggle
+```
+
+### **Step 0.5: Edit Setup Script (Run ONCE)**
+```python
+# Edit kaggle_setup.py and replace YOUR_NGROK_AUTH_TOKEN_HERE with your actual token
+# Get your free token from: https://dashboard.ngrok.com/get-started/your-authtoken
+```
+
 ### **Step 1: Setup (Run ONCE per session)**
 ```python
 # Cell 1: Run this ONCE per Kaggle session
@@ -17,7 +30,6 @@
 ```
 
 **What this does automatically:**
-- ✅ Clones DeepSeek-OCR repository if not present
 - ✅ Installs ALL dependencies (skips already installed)
 - ✅ Sets up Kaggle environment and directories
 - ✅ Configures mandatory ngrok setup
@@ -40,7 +52,19 @@
 ## 🔧 **Complete Kaggle Notebook Example**
 
 ```python
-# Cell 1: Setup (run ONCE)
+# Cell 0: Clone repository (run ONCE)
+!git clone https://github.com/zakir0101/deepseek-ocr-kaggle.git
+%cd deepseek-ocr-kaggle
+```
+
+```python
+# Cell 0.5: Edit setup script (run ONCE)
+# Open kaggle_setup.py and replace YOUR_NGROK_AUTH_TOKEN_HERE with your actual token
+# Get your free token from: https://dashboard.ngrok.com/get-started/your-authtoken
+```
+
+```python
+# Cell 1: Setup (run ONCE per session)
 !python kaggle_setup.py
 ```
 
@@ -171,12 +195,19 @@ The setup script installs everything:
 
 ## 🔄 **Workflow Summary**
 
-### **First Time in Session:**
+### **First Time Ever:**
 ```python
-# Cell 1
+# Cell 0: Clone repository
+!git clone https://github.com/zakir0101/deepseek-ocr-kaggle.git
+%cd deepseek-ocr-kaggle
+
+# Cell 0.5: Edit setup script
+# Open kaggle_setup.py and replace YOUR_NGROK_AUTH_TOKEN_HERE with your actual token
+
+# Cell 1: Setup
 !python kaggle_setup.py
 
-# Cell 2
+# Cell 2: Runtime
 !python kaggle_server.py
 ```
 

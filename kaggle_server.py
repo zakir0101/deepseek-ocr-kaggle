@@ -468,8 +468,10 @@ if __name__ == '__main__':
     # Check if we're in the right directory
     current_dir = Path(__file__).parent
     if not (current_dir / "deepseek_ocr.py").exists():
-        print("Error: Not in DeepSeek-OCR-vllm directory")
-        print("Please run from: DeepSeek-OCR/DeepSeek-OCR-vllm")
+        print("Error: Not in deepseek-ocr-kaggle directory")
+        print("Please ensure you're in the correct directory:")
+        print("!git clone https://github.com/zakir0101/deepseek-ocr-kaggle.git")
+        print("%cd deepseek-ocr-kaggle")
         sys.exit(1)
 
     # Initialize model on startup
