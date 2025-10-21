@@ -62,7 +62,6 @@ print(f"Output folder: {OUTPUT_FOLDER}")
 
 # Global variables for model and engine
 engine = None
-processor = None
 ngrok_url = None
 
 # Configuration - HARDCODED for Kaggle persistence
@@ -77,7 +76,7 @@ if VLLM_AVAILABLE and OCR_AVAILABLE:
 
 def initialize_model():
     """Initialize the vLLM engine once during server startup"""
-    global engine, processor
+    global engine
 
     if not VLLM_AVAILABLE or not OCR_AVAILABLE:
         print("Running in demo mode - no model initialization")
@@ -99,9 +98,6 @@ def initialize_model():
             gpu_memory_utilization=0.75,
         )
         engine = AsyncLLMEngine.from_engine_args(engine_args)
-
-        # Initialize processor
-        processor = DeepseekOCRProcessor()
 
         print("✓ Model initialization complete!")
 
@@ -333,7 +329,7 @@ async def generate_ocr_real(image_features, prompt):
 
 async def generate_ocr(image_features, prompt):
     """Generate OCR output - uses real model or demo based on availability"""
-    if engine is not None and processor is not None:
+    if engine is not None:
         return await generate_ocr_real(image_features, prompt)
     else:
         return await generate_ocr_demo(image_features, prompt)
@@ -365,15 +361,14 @@ def ocr_image():
 
         # Process image
         image_features = None
-        if OCR_AVAILABLE and processor is not None and '<image>' in prompt:
+        if OCR_AVAILABLE and '<image>' in prompt:
             try:
-                image_features = processor.tokenize_with_images(
+                # Create new processor instance like in official code
+                image_features = DeepseekOCRProcessor().tokenize_with_images(
                     images=[image], bos=True, eos=True, cropping=CROP_MODE
                 )
             except Exception as e:
                 print(f"Image processing failed: {e}")
-        elif OCR_AVAILABLE and processor is None:
-            print("Processor not available - running in demo mode")
 
         # Generate OCR
         loop = asyncio.new_event_loop()
