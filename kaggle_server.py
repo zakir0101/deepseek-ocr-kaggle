@@ -65,10 +65,10 @@ engine = None
 processor = None
 ngrok_url = None
 
-# Configuration - use environment variables or defaults
-MODEL_PATH = os.environ.get('MODEL_PATH', 'deepseek-ai/DeepSeek-OCR')
-PROMPT = os.environ.get('PROMPT', '<image>\n<|grounding|>Convert the document to markdown.')
-CROP_MODE = os.environ.get('CROP_MODE', 'True').lower() == 'true'
+# Configuration - HARDCODED for Kaggle persistence
+MODEL_PATH = '/kaggle/working/deepseek-ocr-model'
+PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
+CROP_MODE = True
 
 if VLLM_AVAILABLE and OCR_AVAILABLE:
     # Register model
@@ -121,6 +121,13 @@ def start_ngrok_tunnel(port=5000):
         public_url = ngrok.connect(port)
         ngrok_url = public_url
         print(f"✓ Ngrok tunnel started: {public_url}")
+
+        # Print easy-to-copy URL
+        print("\n" + "="*60)
+        print("🌐 COPY THIS URL FOR CLIENT ACCESS:")
+        print(f"{public_url}")
+        print("="*60 + "\n")
+
         return public_url
 
     except Exception as e:
