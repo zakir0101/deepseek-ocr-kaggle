@@ -66,8 +66,8 @@ print(f"Output folder: {OUTPUT_FOLDER}")
 engine = None
 ngrok_url = None
 
-# Configuration - HARDCODED for Kaggle persistence
-MODEL_PATH = '/kaggle/working/deepseek-ocr-model'
+# Configuration - Use environment variable or fallback
+MODEL_PATH = os.environ.get('MODEL_PATH', '/kaggle/working/deepseek-ocr-model')
 PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
 CROP_MODE = True
 
@@ -81,11 +81,20 @@ def initialize_model():
     global engine
 
     if not VLLM_AVAILABLE or not OCR_AVAILABLE:
-        print("Running in demo mode - no model initialization")
-        return
+        print("✗ Required dependencies not available")
+        print(f"VLLM_AVAILABLE: {VLLM_AVAILABLE}")
+        print(f"OCR_AVAILABLE: {OCR_AVAILABLE}")
+        print("Exiting...")
+        import sys
+        sys.exit(1)
 
     print("Initializing DeepSeek-OCR model for Kaggle...")
     print(f"Using model path: {MODEL_PATH}")
+    print(f"Model path exists: {os.path.exists(MODEL_PATH)}")
+    if os.path.exists(MODEL_PATH):
+        print(f"Model directory contents: {os.listdir(MODEL_PATH)}")
+    else:
+        print("Model directory does not exist!")
 
     try:
         # Initialize engine
@@ -105,7 +114,9 @@ def initialize_model():
 
     except Exception as e:
         print(f"✗ Model initialization failed: {e}")
-        print("Running in demo mode")
+        print("Exiting...")
+        import sys
+        sys.exit(1)
 
 
 def start_ngrok_tunnel(port=5000):
@@ -268,24 +279,6 @@ def image_to_base64(image):
     return f"data:image/jpeg;base64,{img_str}"
 
 
-async def generate_ocr_demo(image_features, prompt):
-    """Demo OCR generation when model is not available"""
-    await asyncio.sleep(2)  # Simulate processing time
-
-    demo_output = """# Sample Document
-
-This is a **demo output** from DeepSeek OCR. In a real environment, this would be the actual OCR result from your document.
-
-## Features
-- Text extraction
-- Layout analysis
-- Markdown conversion
-- Image detection
-
-**Note:** Running in demo mode. Install vLLM and DeepSeek-OCR for full functionality.
-"""
-
-    return demo_output
 
 
 async def generate_ocr_real(image_features, prompt):
@@ -330,11 +323,10 @@ async def generate_ocr_real(image_features, prompt):
 
 
 async def generate_ocr(image_features, prompt):
-    """Generate OCR output - uses real model or demo based on availability"""
-    if engine is not None:
-        return await generate_ocr_real(image_features, prompt)
-    else:
-        return await generate_ocr_demo(image_features, prompt)
+    """Generate OCR output - engine should always be available"""
+    if engine is None:
+        raise RuntimeError("Engine not initialized - server should have exited")
+    return await generate_ocr_real(image_features, prompt)
 
 
 @app.route('/api/ocr/image', methods=['POST'])
@@ -415,8 +407,7 @@ def ocr_image():
             'original_markdown': result_out,
             'image_with_boxes': boxes_base64,
             'extracted_images': image_urls,
-            'demo_mode': engine is None
-        })
+            })
 
     except Exception as e:
         print(f"Error in OCR endpoint: {e}")
