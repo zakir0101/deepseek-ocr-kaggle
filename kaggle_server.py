@@ -10,11 +10,24 @@ import io
 import os
 import re
 import time
+import subprocess
+import sys
 from pathlib import Path
 
-# Import numpy first to check version
+# Force numpy 1.26.4 for compatibility
+print("Checking numpy version...")
 import numpy as np
-print(f"Using numpy version: {np.__version__}")
+if np.__version__ != "1.26.4":
+    print(f"Current numpy version: {np.__version__} - forcing 1.26.4")
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "--force-reinstall", "numpy==1.26.4"
+    ])
+    # Reload numpy
+    import importlib
+    importlib.reload(np)
+    print(f"✓ Numpy version now: {np.__version__}")
+else:
+    print(f"✓ Using correct numpy version: {np.__version__}")
 
 import torch
 from flask import Flask, request, jsonify, send_file
