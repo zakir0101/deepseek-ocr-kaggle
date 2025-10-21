@@ -152,7 +152,7 @@ def install_kaggle_dependencies():
 
 
 def download_model_if_needed():
-    """Download model if not present in Kaggle working directory"""
+    """Download model to /kaggle/working for persistence"""
     print("Checking for model files...")
 
     # Model will be stored in /kaggle/working for persistence
@@ -166,46 +166,35 @@ def download_model_if_needed():
         print(f"Model path set to: {model_dir}")
         return True
 
-    # Check if model is available in Kaggle input
-    kaggle_input = Path("/kaggle/input")
-    model_dirs = list(kaggle_input.glob("*deepseek*"))
+    # ALWAYS download to /kaggle/working for persistence
+    print("Downloading model to /kaggle/working for persistence...")
 
-    if model_dirs:
-        print(f"Found model directories: {[d.name for d in model_dirs]}")
-        # Set model path to the first found directory
-        model_path = str(model_dirs[0])
-        os.environ["MODEL_PATH"] = model_path
-        print(f"Model path set to: {model_path}")
-    else:
-        print("No model found. Downloading from HuggingFace hub...")
+    try:
+        from huggingface_hub import snapshot_download
 
-        # Download model to working directory for persistence
-        try:
-            from huggingface_hub import snapshot_download
+        print("Downloading DeepSeek-OCR model (this may take a few minutes)...")
+        downloaded_path = snapshot_download(
+            repo_id="deepseek-ai/DeepSeek-OCR",
+            local_dir=str(model_dir),
+            local_dir_use_symlinks=False,
+            resume_download=True
+        )
 
-            print("Downloading DeepSeek-OCR model (this may take a few minutes)...")
-            downloaded_path = snapshot_download(
-                repo_id="deepseek-ai/DeepSeek-OCR",
-                local_dir=str(model_dir),
-                local_dir_use_symlinks=False,
-                resume_download=True
-            )
+        os.environ["MODEL_PATH"] = str(model_dir)
+        print(f"✓ Model downloaded to: {model_dir}")
+        print(f"Model path set to: {model_dir}")
 
-            os.environ["MODEL_PATH"] = str(model_dir)
-            print(f"✓ Model downloaded to: {model_dir}")
-            print(f"Model path set to: {model_dir}")
-
-        except ImportError:
-            print("✗ huggingface_hub not available. Installing...")
-            subprocess.check_call([
-                sys.executable, "-m", "pip", "install", "-q", "huggingface_hub"
-            ])
-            # Retry download
-            return download_model_if_needed()
-        except Exception as e:
-            print(f"✗ Model download failed: {e}")
-            print("Will use HuggingFace hub directly (no persistence)")
-            os.environ["MODEL_PATH"] = "deepseek-ai/DeepSeek-OCR"
+    except ImportError:
+        print("✗ huggingface_hub not available. Installing...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q", "huggingface_hub"
+        ])
+        # Retry download
+        return download_model_if_needed()
+    except Exception as e:
+        print(f"✗ Model download failed: {e}")
+        print("Will use HuggingFace hub directly (no persistence)")
+        os.environ["MODEL_PATH"] = "deepseek-ai/DeepSeek-OCR"
 
     return True
 
@@ -217,22 +206,21 @@ def setup_ngrok():
     try:
         from pyngrok import ngrok
 
-        # Check if ngrok is authenticated
+        # SET THE TOKEN FIRST - don't try to get tunnels before authentication
+        print("Setting ngrok token...")
+        ngrok.set_auth_token(
+            "2Xggvjlzi2yhVSoKzaxbqGdw3hq_hu2s9JyNg54nyvSaEhai"
+        )
+        print("✓ Ngrok token configured")
+
+        # Now check if ngrok is working
         try:
-            # Try to get existing tunnels
             tunnels = ngrok.get_tunnels()
-            print("✓ ngrok is already configured")
+            print("✓ ngrok is working")
             return True
         except Exception as e:
-            print(f"✗ ngrok authentication failed: {e}")
-            print("\nNGROK SETUP IS MANDATORY FOR PUBLIC ACCESS")
-            print("Setting ngrok token automatically...")
-
-            # Set the ngrok token directly in the script
-            ngrok.set_auth_token(
-                "2Xggvjlzi2yhVSoKzaxbqGdw3hq_hu2s9JyNg54nyvSaEhai"
-            )
-            print("✓ Ngrok token configured")
+            print(f"⚠ ngrok tunnel check failed: {e}")
+            print("But token is set - ngrok should work when server starts")
             return True
 
     except ImportError as e:
