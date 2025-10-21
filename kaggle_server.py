@@ -19,7 +19,7 @@ print(f"Using numpy version: {np.__version__}")
 import torch
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageOps, ImageFont
 
 # Import vLLM components with error handling
 try:
@@ -42,7 +42,7 @@ except ImportError:
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Allow all origins for ngrok access
 
 # Kaggle-specific paths
 KAGGLE_WORKING = Path('/kaggle/working/deepseek-ocr')
@@ -365,13 +365,15 @@ def ocr_image():
 
         # Process image
         image_features = None
-        if OCR_AVAILABLE and '<image>' in prompt:
+        if OCR_AVAILABLE and processor is not None and '<image>' in prompt:
             try:
                 image_features = processor.tokenize_with_images(
                     images=[image], bos=True, eos=True, cropping=CROP_MODE
                 )
             except Exception as e:
                 print(f"Image processing failed: {e}")
+        elif OCR_AVAILABLE and processor is None:
+            print("Processor not available - running in demo mode")
 
         # Generate OCR
         loop = asyncio.new_event_loop()
@@ -444,6 +446,8 @@ def serve_image(filename):
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
+    print(f"Health check request from: {request.remote_addr}")
+    print(f"Request headers: {dict(request.headers)}")
     return jsonify({
         'status': 'healthy',
         'model_loaded': engine is not None,
