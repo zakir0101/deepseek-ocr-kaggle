@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from typing import Optional, Tuple, Type
 from functools import partial
-from flash_attn import flash_attn_qkvpacked_func
+# from flash_attn import flash_attn_qkvpacked_func  # Commented out - using PyTorch SDPA instead
 # from .common import LayerNorm2d, MLPBlock
 
 # from mmgpt.model.vision_encoder.flash_4 import _attention_rel_h_rel_w

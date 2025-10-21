@@ -6,7 +6,7 @@ from easydict import EasyDict as adict
 import torch
 from torch.nn import functional as F
 from torch import nn
-from flash_attn import flash_attn_qkvpacked_func, flash_attn_func
+# from flash_attn import flash_attn_qkvpacked_func, flash_attn_func  # Commented out - using PyTorch SDPA instead
 # from optimus import flash_attn_func
 # from megatron.core import tensor_parallel
 # from megatron.core import parallel_state as mpu
@@ -248,38 +248,19 @@ class NoTPAttention(torch.nn.Module):
         xqkv = self.qkv_proj(x)
         xqkv = xqkv.view(bsz, seqlen, 3, self.num_heads, self.head_dim)
 
-        if self.use_flash_attention:
-            output = flash_attn_qkvpacked_func(xqkv)
-            output = output.view(bsz, seqlen, -1)
-            # xq, xk, xv = torch.split(xqkv, 1, dim=2)
-            # xq = xq.squeeze(2)
-            # xk = xk.squeeze(2)
-            # xv = xv.squeeze(2)
-            # # xq, xk, xv = xqkv[:, :, 0, ...], xqkv[:, :, 1, ...], xqkv[:, :, 2, ...]
+        # Use PyTorch's scaled_dot_product_attention (SDPA) instead of flash-attn
+        xq, xk, xv = torch.split(xqkv, 1, dim=2)
+        xq = xq.squeeze(2)
+        xk = xk.squeeze(2)
+        xv = xv.squeeze(2)
 
-            # # （B, num_head, S, head_size)
-            # xq = xq.permute(0, 2, 1, 3)
-            # xk = xk.permute(0, 2, 1, 3)
-            # xv = xv.permute(0, 2, 1, 3)
-            # # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-            # output = torch.nn.functional.scaled_dot_product_attention(xq, xk, xv, attn_mask=None)
-            # output = output.permute(0, 2, 1, 3).reshape(bsz, seqlen, -1)
-                # output = output.permute(0, 2, 1, 3).contiguous().view(bsz, seqlen, -1)
-        else:
-            # output = flash_attn_qkvpacked_func(xqkv)
-            xq, xk, xv = torch.split(xqkv, 1, dim=2)
-            xq = xq.squeeze(2)
-            xk = xk.squeeze(2)
-            xv = xv.squeeze(2)
-            # xq, xk, xv = xqkv[:, :, 0, ...], xqkv[:, :, 1, ...], xqkv[:, :, 2, ...]
+        # （B, num_head, S, head_size)
+        xq = xq.permute(0, 2, 1, 3)
+        xk = xk.permute(0, 2, 1, 3)
+        xv = xv.permute(0, 2, 1, 3)
 
-            # （B, num_head, S, head_size)
-            xq = xq.permute(0, 2, 1, 3)
-            xk = xk.permute(0, 2, 1, 3)
-            xv = xv.permute(0, 2, 1, 3)
-            # with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
-            output = torch.nn.functional.scaled_dot_product_attention(xq, xk, xv, attn_mask=None)
-            output = output.permute(0, 2, 1, 3).reshape(bsz, seqlen, -1)
+        output = torch.nn.functional.scaled_dot_product_attention(xq, xk, xv, attn_mask=None)
+        output = output.permute(0, 2, 1, 3).reshape(bsz, seqlen, -1)
         output = self.out_proj(output)
         return output
 

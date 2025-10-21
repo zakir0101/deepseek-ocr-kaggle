@@ -89,3 +89,9 @@ config_local.py
 # Cache
 .cache/
 .pytest_cache/
+
+# Official DeepSeek-OCR repository (cloned for reference)
+DeepSeek-OCR/
+
+# Old/unused files directory
+.old/

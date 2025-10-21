@@ -14,6 +14,9 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+# Set vLLM to use legacy API (compatible with DeepSeek OCR)
+os.environ['VLLM_USE_V1'] = '0'
+
 # Vast.ai workspace paths
 WORKSPACE = Path("/opt/workspace-internal")
 MODEL_PATH = WORKSPACE / "deepseek-ocr-model"
@@ -91,13 +94,10 @@ def initialize_model():
         print("Model directory does not exist!")
 
     try:
-        # Initialize engine - auto-detect best dtype for GPU
+        # Try a simpler approach - use vLLM without custom architecture
+        # The model might work with auto-detection
         engine_args = AsyncEngineArgs(
             model=str(MODEL_PATH),
-            hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
-            block_size=256,
-            max_model_len=8192,
-            enforce_eager=False,
             trust_remote_code=True,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.75,
@@ -109,14 +109,19 @@ def initialize_model():
 
     except Exception as e:
         print(f"✗ Model initialization failed: {e}")
-        print("Exiting...")
-        sys.exit(1)
+        print("⚠ Continuing without model - server will start but OCR functionality will be limited")
+        # Don't exit - let the server start without model
 
 
 async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
     """Process image using DeepSeek OCR model"""
     if engine is None:
-        raise ValueError("Model engine not initialized")
+        return {
+            'text': 'Model not available - server is running but OCR functionality is disabled',
+            'boxes': [],
+            'success': False,
+            'error': 'Model engine not initialized'
+        }
 
     try:
         # Create processor instance (not global)
@@ -319,8 +324,7 @@ def main():
     initialize_model()
 
     if engine is None:
-        print("✗ Cannot start server - model not initialized")
-        sys.exit(1)
+        print("⚠ Model not initialized - server will start but OCR functionality will be limited")
 
     # Start ngrok tunnel
     ngrok_url = start_ngrok()
