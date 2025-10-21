@@ -60,6 +60,7 @@ def install_kaggle_dependencies():
     print("Installing Kaggle-specific dependencies...")
 
     # All required dependencies for DeepSeek OCR
+    # Using versions compatible with Kaggle environment
     all_deps = [
         # Core OCR dependencies
         "transformers==4.46.3",
@@ -70,7 +71,7 @@ def install_kaggle_dependencies():
         "easydict",
         "addict",
         "Pillow==10.0.1",
-        "numpy==1.24.3",
+        "numpy==1.26.4",  # Compatible with most Kaggle packages
         # Flask server dependencies
         "flask==2.3.3",
         "flask-cors==4.0.0",
@@ -80,6 +81,8 @@ def install_kaggle_dependencies():
         "vllm==0.8.5",
         # Optional optimizations
         "flash-attn==2.7.3",
+        # Additional dependencies for model download
+        "huggingface_hub",
     ]
 
     # Check which dependencies are already installed
@@ -132,13 +135,22 @@ def install_kaggle_dependencies():
 
 
 def download_model_if_needed():
-    """Download model if not present in Kaggle dataset"""
+    """Download model if not present in Kaggle working directory"""
     print("Checking for model files...")
+
+    # Model will be stored in /kaggle/working for persistence
+    kaggle_working = Path("/kaggle/working")
+    model_dir = kaggle_working / "deepseek-ocr-model"
+
+    # Check if model is already downloaded in working directory
+    if model_dir.exists():
+        print(f"✓ Model found in working directory: {model_dir}")
+        os.environ["MODEL_PATH"] = str(model_dir)
+        print(f"Model path set to: {model_dir}")
+        return True
 
     # Check if model is available in Kaggle input
     kaggle_input = Path("/kaggle/input")
-
-    # Look for common model directories
     model_dirs = list(kaggle_input.glob("*deepseek*"))
 
     if model_dirs:
@@ -148,8 +160,35 @@ def download_model_if_needed():
         os.environ["MODEL_PATH"] = model_path
         print(f"Model path set to: {model_path}")
     else:
-        print("No model found in Kaggle input. Will use HuggingFace hub.")
-        os.environ["MODEL_PATH"] = "deepseek-ai/DeepSeek-OCR"
+        print("No model found. Downloading from HuggingFace hub...")
+
+        # Download model to working directory for persistence
+        try:
+            from huggingface_hub import snapshot_download
+
+            print("Downloading DeepSeek-OCR model (this may take a few minutes)...")
+            downloaded_path = snapshot_download(
+                repo_id="deepseek-ai/DeepSeek-OCR",
+                local_dir=str(model_dir),
+                local_dir_use_symlinks=False,
+                resume_download=True
+            )
+
+            os.environ["MODEL_PATH"] = str(model_dir)
+            print(f"✓ Model downloaded to: {model_dir}")
+            print(f"Model path set to: {model_dir}")
+
+        except ImportError:
+            print("✗ huggingface_hub not available. Installing...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "-q", "huggingface_hub"
+            ])
+            # Retry download
+            return download_model_if_needed()
+        except Exception as e:
+            print(f"✗ Model download failed: {e}")
+            print("Will use HuggingFace hub directly (no persistence)")
+            os.environ["MODEL_PATH"] = "deepseek-ai/DeepSeek-OCR"
 
     return True
 
