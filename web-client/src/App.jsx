@@ -63,9 +63,20 @@ function App() {
 
   const checkServerStatus = async () => {
     try {
-      const response = await axios.get(getApiUrl('health'), {
-        timeout: 5000
+      const healthUrl = getApiUrl('health')
+      console.log('Checking server status at:', healthUrl)
+
+      const response = await axios.get(healthUrl, {
+        timeout: 10000, // 10 seconds
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if the status code is less than 500
+        },
+        headers: {
+          'ngrok-skip-browser-warning': '69420'
+        }
       })
+
+      console.log('Server response:', response.data)
 
       if (response.data.status === 'healthy') {
         setServerStatus('connected')
@@ -74,8 +85,9 @@ function App() {
         setServerStatus('error')
       }
     } catch (err) {
+      console.error('Server connection failed:', err.message)
+      console.error('Error details:', err.response?.data || err.code)
       setServerStatus('disconnected')
-      console.log('Server connection failed:', err.message)
     }
   }
 
@@ -111,6 +123,7 @@ function App() {
       const response = await axios.post(getApiUrl('ocrImage'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'ngrok-skip-browser-warning': '69420'
         },
         timeout: 60000 // 60 second timeout for OCR processing
       })
@@ -158,9 +171,24 @@ function App() {
             {serverStatus === 'checking' && <Loader size={16} />}
             <span>
               Server: {serverStatus === 'connected' ? 'Connected' :
-                      serverStatus === 'disconnected' ? 'Disconnected' :
-                      'Checking...'}
+                serverStatus === 'disconnected' ? 'Disconnected' :
+                  'Checking...'}
             </span>
+            <button
+              onClick={checkServerStatus}
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                fontSize: '12px',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              Refresh
+            </button>
           </div>
 
           {serverUrl && (
@@ -181,7 +209,7 @@ function App() {
         <div className="custom-server">
           <input
             type="text"
-            placeholder="Enter custom server URL (e.g., https://xxx.ngrok.io)"
+            placeholder="https://301bc9609d7f.ngrok-free.app"
             value={customServerUrl}
             onChange={(e) => setCustomServerUrl(e.target.value)}
             className="server-input"

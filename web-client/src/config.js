@@ -9,7 +9,7 @@ const config = {
 
     // For Kaggle deployment, this will be the ngrok URL
     // You can set this dynamically based on the environment
-    remote: process.env.REACT_APP_SERVER_URL || '',
+    remote: 'https://301bc9609d7f.ngrok-free.app',
 
     // Auto-detect which server to use
     getBaseUrl: function() {
@@ -84,18 +84,9 @@ const config = {
   }
 };
 
-// Environment detection
-export const isDevelopment = process.env.NODE_ENV === 'development';
-export const isProduction = process.env.NODE_ENV === 'production';
-
 // Server URL helper
 export const getServerUrl = () => {
-  // In development, we proxy to localhost:5000
-  if (isDevelopment) {
-    return ''; // Use proxy
-  }
-
-  // In production, use the configured remote URL
+  // Always use the configured server URL
   return config.server.getBaseUrl();
 };
 
@@ -111,6 +102,11 @@ export const getApiUrl = (endpoint) => {
 
   // Otherwise use relative URL (will be proxied in dev)
   return fullEndpoint;
+};
+
+// Development mode check
+export const isDevelopment = () => {
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 };
 
 export default config;

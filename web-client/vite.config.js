@@ -6,11 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    proxy: {
+    // Disable proxy when using ngrok URL to avoid conflicts
+    proxy: process.env.USE_PROXY === 'true' ? {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true
       }
-    }
+    } : {}
   }
 })
