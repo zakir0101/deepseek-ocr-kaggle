@@ -36,7 +36,7 @@ OCR_AVAILABLE = False
 try:
     from vllm import AsyncLLMEngine, SamplingParams
     from vllm.engine.arg_utils import AsyncEngineArgs
-    from vllm.model_executor.model_loader import ModelRegistry
+    from vllm.model_executor.models.registry import ModelRegistry
     VLLM_AVAILABLE = True
     print("✓ vLLM modules imported successfully")
 except ImportError as e:
@@ -44,11 +44,12 @@ except ImportError as e:
 
 try:
     from deepseek_ocr import DeepseekOCRForCausalLM
-    from deepseek_ocr.processing_deepseek_ocr import DeepSeekOCRProcessor
+    from process.image_process import DeepseekOCRProcessor
     OCR_AVAILABLE = True
     print("✓ DeepSeek OCR modules imported successfully")
 except ImportError as e:
     print(f"✗ DeepSeek OCR import failed: {e}")
+    print("Note: flash_attn is optional and not required for basic functionality")
 
 # Configuration
 PROMPT = '<image>\n<|grounding|>Convert the document to markdown.'
@@ -57,6 +58,8 @@ CROP_MODE = True
 if VLLM_AVAILABLE and OCR_AVAILABLE:
     # Register model
     ModelRegistry.register_model("DeepseekOCRForCausalLM", DeepseekOCRForCausalLM)
+else:
+    print("⚠ Warning: Some modules not available, but continuing with available functionality")
 
 
 app = Flask(__name__)
@@ -70,9 +73,12 @@ def initialize_model():
     """Initialize the vLLM engine once during server startup"""
     global engine
 
-    if not VLLM_AVAILABLE or not OCR_AVAILABLE:
-        print("✗ Required modules not available - cannot initialize model")
+    if not VLLM_AVAILABLE:
+        print("✗ Required vLLM modules not available - cannot initialize model")
         return
+
+    if not OCR_AVAILABLE:
+        print("⚠ OCR modules not available, but continuing with vLLM initialization")
 
     print("\nInitializing DeepSeek-OCR model for Vast.ai...")
     print(f"Using model path: {MODEL_PATH}")

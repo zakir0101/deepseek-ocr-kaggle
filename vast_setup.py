@@ -31,13 +31,15 @@ def install_dependencies():
     # Install core dependencies
     dependencies = [
         "torch>=2.0.0",
-        "transformers>=4.35.0",
-        "vllm>=0.3.0",
+        "transformers>=4.46.3",
+        "vllm",
         "flask>=2.3.0",
         "flask-cors>=4.0.0",
         "pillow>=10.0.0",
         "pyngrok>=7.0.0",
-        "requests>=2.31.0"
+        "requests>=2.31.0",
+        "easydict",
+        "addict"
     ]
 
     for dep in dependencies:

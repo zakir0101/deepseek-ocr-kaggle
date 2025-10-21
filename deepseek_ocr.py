@@ -11,7 +11,7 @@ from einops import rearrange, repeat
 from transformers import BatchFeature
 
 from vllm.config import VllmConfig
-from vllm.model_executor import SamplingMetadata
+from vllm.v1.sample.metadata import SamplingMetadata
 from vllm.model_executor.layers.quantization import QuantizationConfig
 from vllm.model_executor.model_loader.utils import set_default_torch_dtype
 from vllm.multimodal import MULTIMODAL_REGISTRY
@@ -156,6 +156,7 @@ class DeepseekOCRMultiModalProcessor(
         prompt: str,
         mm_data: Mapping[str, object],
         mm_kwargs: Mapping[str, object],
+        tok_kwargs: Mapping[str, object],
     ) -> BatchFeature:
         
         
@@ -233,6 +234,9 @@ class DeepseekOCRMultiModalProcessor(
         prompt: Union[str, list[int]],
         mm_data_items: MultiModalDataItems,
         hf_processor_mm_kwargs: Mapping[str, object],
+        tokenization_kwargs: Mapping[str, object],
+        *,
+        mm_uuids: Optional[Mapping[str, Union[list[Optional[str]], str]]] = None,
     ) -> tuple[list[int], MultiModalKwargs, bool]:
         # The processor logic is different for len(images) <= 2 vs > 2
         # Since the processing cache assumes that the processor output is
@@ -244,13 +248,15 @@ class DeepseekOCRMultiModalProcessor(
                 prompt=prompt,
                 mm_items=mm_data_items,
                 hf_processor_mm_kwargs=hf_processor_mm_kwargs,
-                enable_hf_prompt_update=True,
+                tokenization_kwargs=tokenization_kwargs,
             )
 
         return super()._cached_apply_hf_processor(
             prompt=prompt,
             mm_data_items=mm_data_items,
             hf_processor_mm_kwargs=hf_processor_mm_kwargs,
+            tokenization_kwargs=tokenization_kwargs,
+            mm_uuids=mm_uuids,
         )
 
 

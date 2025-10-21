@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./deploy-vast.sh)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
