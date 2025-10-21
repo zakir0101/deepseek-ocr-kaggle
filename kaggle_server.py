@@ -36,8 +36,10 @@ try:
     from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
     from process.image_process import DeepseekOCRProcessor
     OCR_AVAILABLE = True
-except ImportError:
-    print("Warning: DeepSeek OCR modules not available. Running in demo mode.")
+    print("✓ DeepSeek OCR modules imported successfully")
+except ImportError as e:
+    print(f"Warning: DeepSeek OCR modules not available: {e}")
+    print("Running in demo mode")
     OCR_AVAILABLE = False
 
 # Initialize Flask app
@@ -361,14 +363,19 @@ def ocr_image():
 
         # Process image
         image_features = None
+        print(f"OCR_AVAILABLE: {OCR_AVAILABLE}, prompt contains <image>: {'<image>' in prompt}")
         if OCR_AVAILABLE and '<image>' in prompt:
             try:
+                print("Creating DeepseekOCRProcessor instance...")
                 # Create new processor instance like in official code
                 image_features = DeepseekOCRProcessor().tokenize_with_images(
                     images=[image], bos=True, eos=True, cropping=CROP_MODE
                 )
+                print("✓ Image processing successful")
             except Exception as e:
                 print(f"Image processing failed: {e}")
+        else:
+            print("Skipping image processing")
 
         # Generate OCR
         loop = asyncio.new_event_loop()
