@@ -118,6 +118,11 @@ def install_kaggle_dependencies():
                         "--no-build-isolation",
                     ]
                 )
+            elif dep_name == "numpy":
+                # Force install numpy 1.26.4 to override conflicts
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "-q", "--force-reinstall", dep]
+                )
             else:
                 subprocess.check_call(
                     [sys.executable, "-m", "pip", "install", "-q", dep]
@@ -212,7 +217,6 @@ def setup_ngrok():
             print("Setting ngrok token automatically...")
 
             # Set the ngrok token directly in the script
-            # Get your free token from: https://dashboard.ngrok.com/get-started/your-authtoken
             ngrok.set_auth_token(
                 "2Xggvjlzi2yhVSoKzaxbqGdw3hq_hu2s9JyNg54nyvSaEhai"
             )

@@ -81,6 +81,7 @@ def initialize_model():
         return
 
     print("Initializing DeepSeek-OCR model for Kaggle...")
+    print(f"Using model path: {MODEL_PATH}")
 
     try:
         # Initialize engine
@@ -93,7 +94,6 @@ def initialize_model():
             trust_remote_code=True,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.75,
-            download_dir=str(KAGGLE_WORKING / 'model_cache'),
         )
         engine = AsyncLLMEngine.from_engine_args(engine_args)
 
