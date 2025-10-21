@@ -494,6 +494,14 @@ if __name__ == '__main__':
         try:
             tunnels = ngrok.get_tunnels()
             print("✓ Ngrok is already running")
+
+            # PRINT THE FUCKING URL
+            if tunnels:
+                public_url = tunnels[0].public_url
+                print("\n" + "="*60)
+                print("🌐 COPY THIS URL FOR CLIENT ACCESS:")
+                print(f"{public_url}")
+                print("="*60 + "\n")
         except:
             print("⚠ Ngrok not configured. To enable public access:")
             print("   from pyngrok import ngrok")
