@@ -110,7 +110,7 @@ def initialize_model():
         print("Model directory does not exist!")
 
     try:
-        # Initialize engine - use float16 for Tesla T4 compatibility
+        # Initialize engine - use auto dtype for Tesla T4 compatibility
         engine_args = AsyncEngineArgs(
             model=MODEL_PATH,
             hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
@@ -120,7 +120,7 @@ def initialize_model():
             trust_remote_code=True,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.75,
-            dtype='half',  # Use float16 instead of bfloat16 for Tesla T4
+            dtype='auto',  # Let vLLM choose the best dtype for Tesla T4
         )
         engine = AsyncLLMEngine.from_engine_args(engine_args)
 
