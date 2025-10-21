@@ -490,25 +490,19 @@ if __name__ == '__main__':
     # Auto-start ngrok if available
     try:
         from pyngrok import ngrok
-        # Check if ngrok is configured
-        try:
-            tunnels = ngrok.get_tunnels()
-            print("✓ Ngrok is already running")
 
-            # PRINT THE FUCKING URL
-            if tunnels:
-                public_url = tunnels[0].public_url
-                print("\n" + "="*60)
-                print("🌐 COPY THIS URL FOR CLIENT ACCESS:")
-                print(f"{public_url}")
-                print("="*60 + "\n")
-        except:
-            print("⚠ Ngrok not configured. To enable public access:")
-            print("   from pyngrok import ngrok")
-            print("   ngrok.set_auth_token('YOUR_AUTH_TOKEN')")
-            print("   Then restart the server")
-    except ImportError:
-        print("⚠ pyngrok not installed. Server will only be accessible locally")
+        # ALWAYS CREATE A NEW TUNNEL AND PRINT THE FUCKING URL
+        print("Starting ngrok tunnel...")
+        public_url = ngrok.connect(5000)
+
+        print("\n" + "="*60)
+        print("🌐 COPY THIS URL FOR CLIENT ACCESS:")
+        print(f"{public_url}")
+        print("="*60 + "\n")
+
+    except Exception as e:
+        print(f"✗ Ngrok failed: {e}")
+        print("Server will only be accessible locally at http://localhost:5000")
 
     print("\nStarting Flask server on http://localhost:5000")
     print("Server will be accessible at the ngrok URL if configured")
