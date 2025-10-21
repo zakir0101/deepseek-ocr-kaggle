@@ -59,6 +59,19 @@ def install_kaggle_dependencies():
     """Install dependencies in Kaggle environment - skip already installed"""
     print("Installing Kaggle-specific dependencies...")
 
+    # FORCE NUMPY 1.26.4 FIRST - this is critical
+    print("Forcing numpy 1.26.4 installation...")
+    try:
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q", "--force-reinstall", "numpy==1.26.4"
+        ])
+        print("✓ numpy 1.26.4 installed")
+    except subprocess.CalledProcessError:
+        print("⚠ numpy installation failed - trying without force")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q", "numpy==1.26.4"
+        ])
+
     # All required dependencies for DeepSeek OCR
     # Using versions compatible with Kaggle environment
     all_deps = [
@@ -71,7 +84,6 @@ def install_kaggle_dependencies():
         "easydict",
         "addict",
         "Pillow==10.0.1",
-        "numpy==1.26.4",  # Compatible with most Kaggle packages
         # Flask server dependencies
         "flask==2.3.3",
         "flask-cors==4.0.0",

@@ -12,11 +12,14 @@ import re
 import time
 from pathlib import Path
 
+# Import numpy first to check version
+import numpy as np
+print(f"Using numpy version: {np.__version__}")
+
 import torch
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from PIL import Image, ImageDraw, ImageOps
-import numpy as np
 
 # Import vLLM components with error handling
 try:
