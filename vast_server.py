@@ -18,8 +18,8 @@ from datetime import datetime
 os.environ['VLLM_USE_V1'] = '0'
 
 # Vast.ai workspace paths
-WORKSPACE = Path("/opt/workspace-internal")
-MODEL_PATH = WORKSPACE / "deepseek-ocr-model"
+WORKSPACE = Path("/home/zakir/deepseek-ocr-kaggle")
+MODEL_PATH = WORKSPACE / "models" / "deepseek-ocr"
 UPLOAD_FOLDER = WORKSPACE / "uploads"
 OUTPUT_FOLDER = WORKSPACE / "outputs"
 
