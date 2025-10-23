@@ -95,10 +95,10 @@ def initialize_model():
         print("Model directory does not exist!")
 
     try:
-        # Try a simpler approach - use vLLM without custom architecture
-        # The model might work with auto-detection
+        # Use the correct architecture for DeepSeek OCR
         engine_args = AsyncEngineArgs(
             model=str(MODEL_PATH),
+            hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
             trust_remote_code=True,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.75,
@@ -149,34 +149,43 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         sampling_params = SamplingParams(
             temperature=0.0,
             top_p=1.0,
-            max_tokens=4096
+            max_tokens=4096,
+            timeout=120.0  # 2 minute timeout to prevent hanging
         )
 
         # Generate response
         request_id = f"request-{int(time.time())}"
-        result_generator = engine.generate(
-            request,
-            sampling_params,
-            request_id
-        )
 
-        # Get the result
-        async for result in result_generator:
-            if result.outputs:
-                output_text = result.outputs[0].text
+        printed_length = 0
+        final_output = ""
 
-                # Extract bounding boxes if available
-                boxes = []
-                if hasattr(result.outputs[0], 'boxes') and result.outputs[0].boxes:
-                    boxes = result.outputs[0].boxes
+        print(f"Starting generation with request_id: {request_id}")
 
-                return {
-                    'text': output_text,
-                    'boxes': boxes,
-                    'success': True
-                }
+        try:
+            async for request_output in engine.generate(
+                request,
+                sampling_params,
+                request_id
+            ):
+                if request_output.outputs:
+                    full_text = request_output.outputs[0].text
+                    final_output = full_text
+                    print(f"Generated text length: {len(full_text)}")
+                    print(f"Generated text preview: {full_text[:100]}...")
+        except Exception as e:
+            print(f"Error during generation: {e}")
+            return {'text': f'Generation error: {str(e)}', 'boxes': [], 'success': False}
 
-        return {'text': '', 'boxes': [], 'success': False}
+        # Extract bounding boxes if available
+        boxes = []
+        if final_output:
+            return {
+                'text': final_output,
+                'boxes': boxes,
+                'success': True
+            }
+        else:
+            return {'text': '', 'boxes': [], 'success': False}
 
     except Exception as e:
         print(f"Error processing image: {e}")
@@ -248,10 +257,13 @@ def ocr_image():
         print(f"Processing image: {image_filename}")
 
         # Process image
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         result = loop.run_until_complete(process_image_async(image_path))
-        loop.close()
 
         if not result['success']:
             return jsonify({'error': result['text']}), 500
