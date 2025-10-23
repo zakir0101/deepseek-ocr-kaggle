@@ -46,21 +46,28 @@ elif [[ -z "$COMMIT_MESSAGE" ]]; then
 fi
 
 echo ""
-echo "🔗 SSH connection instructions:"
-echo "================================"
-echo "Run this command to connect to the server:"
-echo "ssh -p 40032 zakir@223.166.245.194 -L 8080:localhost:8080 -L 5000:localhost:5000"
+echo "🔗 Deploying to server..."
+echo "=============================="
+
+# SSH into server and deploy
+ssh -p 40032 zakir@223.166.245.194 << 'EOF'
+    echo "🛑 Stopping current server..."
+    pkill -9 python3
+
+    echo "📁 Navigating to project..."
+    cd /home/zakir/deepseek-ocr-kaggle
+
+    echo "⬇️ Pulling latest changes..."
+    git fetch origin
+    git reset --hard origin/master
+
+    echo "🚀 Starting server..."
+    python3 vast_server.py &
+
+    echo "✅ Server deployment complete!"
+    echo "🌐 Access at: http://localhost:5000"
+EOF
+
 echo ""
-echo "📋 Once connected, run these commands:"
-echo "===================================="
-echo "1. Stop current server: pkill -9 python3"
-echo "2. Navigate to project: cd /home/zakir/deepseek-ocr-kaggle"
-echo "3. Pull latest changes: git pull origin master"
-echo "4. Start server: python3 vast_server.py"
-echo ""
-echo "🌐 After starting the server, you can access it at:"
-echo "- Health check: http://localhost:5000/health"
-echo "- Frontend: http://localhost:8080"
-echo ""
-echo "✅ Deployment script completed!"
-echo "📋 Follow the instructions above to deploy to the server."
+echo "✅ Deployment completed!"
+echo "🌐 Server should be running at: http://localhost:5000"
