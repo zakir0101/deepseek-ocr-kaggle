@@ -198,7 +198,7 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
                 return final_output
 
             # Wait for generation with 120 second timeout
-            await asyncio.wait_for(generate_ocr(), timeout=120.0)
+            final_output = await asyncio.wait_for(generate_ocr(), timeout=120.0)
 
         except asyncio.TimeoutError:
             print("Generation timed out after 120 seconds")
