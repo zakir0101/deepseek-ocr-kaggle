@@ -163,7 +163,6 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
             temperature=0.0,
             top_p=1.0,
             max_tokens=4096,
-            timeout=120.0,  # 2 minute timeout to prevent hanging
             logits_processors=logits_processors,
             skip_special_tokens=False
         )
@@ -171,26 +170,35 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         # Generate response
         request_id = f"request-{int(time.time())}"
 
-        printed_length = 0
-        final_output = ""
-
         print(f"Starting generation with request_id: {request_id}")
 
         try:
-            async for request_output in engine.generate(
-                request,
-                sampling_params,
-                request_id
-            ):
-                if request_output.outputs:
-                    full_text = request_output.outputs[0].text
-                    # Stream the output like official code
-                    new_text = full_text[printed_length:]
-                    if new_text:
-                        print(new_text, end='', flush=True)
-                    printed_length = len(full_text)
-                    final_output = full_text
-            print('\n')  # New line after generation completes
+            # Use asyncio.wait_for for timeout
+            async def generate_with_timeout():
+                printed_length = 0
+                final_output = ""
+                async for request_output in engine.generate(
+                    request,
+                    sampling_params,
+                    request_id
+                ):
+                    if request_output.outputs:
+                        full_text = request_output.outputs[0].text
+                        # Stream the output like official code
+                        new_text = full_text[printed_length:]
+                        if new_text:
+                            print(new_text, end='', flush=True)
+                        printed_length = len(full_text)
+                        final_output = full_text
+                print('\n')  # New line after generation completes
+                return final_output
+
+            # Wait for generation with 120 second timeout
+            final_output = await asyncio.wait_for(generate_with_timeout(), timeout=120.0)
+
+        except asyncio.TimeoutError:
+            print("Generation timed out after 120 seconds")
+            return {'text': 'Generation timed out', 'boxes': [], 'success': False}
         except Exception as e:
             print(f"Error during generation: {e}")
             return {'text': f'Generation error: {str(e)}', 'boxes': [], 'success': False}
@@ -359,6 +367,10 @@ def start_ngrok():
 
 def main():
     """Main server startup"""
+    # Create necessary directories
+    UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+    OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
     # Initialize model
     initialize_model()
 
