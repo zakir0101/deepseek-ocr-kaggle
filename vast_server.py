@@ -176,11 +176,11 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         print(f"Starting generation with request_id: {request_id}")
 
         try:
-            printed_length = 0
-            final_output = ""
-
             # Generate with timeout
             async def generate_ocr():
+                printed_length = 0
+                final_output = ""
+
                 async for request_output in engine.generate(
                     request,
                     sampling_params,
@@ -193,9 +193,9 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
                         if new_text:
                             print(new_text, end='', flush=True)
                         printed_length = len(full_text)
-                        nonlocal final_output
                         final_output = full_text
                 print('\n')  # New line after generation completes
+                return final_output
 
             # Wait for generation with 120 second timeout
             await asyncio.wait_for(generate_ocr(), timeout=120.0)
