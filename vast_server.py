@@ -323,15 +323,8 @@ def ocr_image():
         print(f"Processing image: {image_filename}")
 
         # Process image with proper async task management
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        # Run the async task and ensure it completes
-        task = loop.create_task(process_image_async(image_path))
-        result = loop.run_until_complete(task)
+        # Use asyncio.run() for each request to avoid event loop conflicts
+        result = asyncio.run(process_image_async(image_path))
 
         if not result['success']:
             return jsonify({'error': result['text']}), 500
