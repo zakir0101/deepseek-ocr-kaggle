@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./deploy-vast.sh)"
+      "Bash(./deploy-vast.sh)",
+      "Bash(vastai search offers 'gpu_name == \"\"\"\"RTX_4080\"\"\"\" compute_cap > 800' -o 'dph')"
     ],
     "deny": [],
     "ask": []

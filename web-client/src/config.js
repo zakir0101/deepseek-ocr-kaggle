@@ -4,30 +4,14 @@
 const config = {
   // Server configuration
   server: {
-    // Default server URL (for local development)
-    local: 'http://localhost:5000',
-
-    // For Kaggle deployment, this will be the ngrok URL
-    // You can set this dynamically based on the environment
-    remote: 'https://301bc9609d7f.ngrok-free.app',
-
-    // Auto-detect which server to use
-    getBaseUrl: function() {
-      // If we have a remote URL configured, use it
-      if (this.remote) {
-        return this.remote;
-      }
-
-      // Otherwise use local server (for development)
-      return this.local;
-    },
+    // Static server URL - always use localhost:5000
+    baseUrl: 'http://localhost:5000',
 
     // API endpoints
     endpoints: {
-      ocrImage: '/api/ocr/image',
-      ocrPdf: '/api/ocr/pdf',
+      ocrImage: '/ocr/image',
       health: '/health',
-      images: '/images'
+      images: '/image'
     }
   },
 
@@ -86,8 +70,8 @@ const config = {
 
 // Server URL helper
 export const getServerUrl = () => {
-  // Always use the configured server URL
-  return config.server.getBaseUrl();
+  // Always use the static server URL
+  return config.server.baseUrl;
 };
 
 // API URL helper

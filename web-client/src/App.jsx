@@ -13,8 +13,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('rendered')
   const [isDragOver, setIsDragOver] = useState(false)
   const [serverStatus, setServerStatus] = useState('checking')
-  const [serverUrl, setServerUrl] = useState('')
-  const [customServerUrl, setCustomServerUrl] = useState('')
 
   const handleFileSelect = useCallback((file) => {
     if (file && file.type.startsWith('image/')) {
@@ -70,9 +68,6 @@ function App() {
         timeout: 10000, // 10 seconds
         validateStatus: function (status) {
           return status < 500; // Resolve only if the status code is less than 500
-        },
-        headers: {
-          'ngrok-skip-browser-warning': '69420'
         }
       })
 
@@ -80,7 +75,6 @@ function App() {
 
       if (response.data.status === 'healthy') {
         setServerStatus('connected')
-        setServerUrl(response.config.url.replace('/health', ''))
       } else {
         setServerStatus('error')
       }
@@ -91,15 +85,6 @@ function App() {
     }
   }
 
-  const handleCustomServer = () => {
-    if (customServerUrl) {
-      // Update the server URL
-      config.server.remote = customServerUrl
-      setServerUrl(customServerUrl)
-      setCustomServerUrl('')
-      checkServerStatus()
-    }
-  }
 
   const processOCR = async () => {
     if (!selectedFile) {
@@ -122,8 +107,7 @@ function App() {
 
       const response = await axios.post(getApiUrl('ocrImage'), formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'ngrok-skip-browser-warning': '69420'
+          'Content-Type': 'multipart/form-data'
         },
         timeout: 60000 // 60 second timeout for OCR processing
       })
@@ -191,12 +175,6 @@ function App() {
             </button>
           </div>
 
-          {serverUrl && (
-            <div className="server-url">
-              <Server size={14} />
-              <span>{serverUrl}</span>
-            </div>
-          )}
 
           {result?.demo_mode && (
             <div className="demo-notice">
@@ -205,29 +183,6 @@ function App() {
           )}
         </div>
 
-        {/* Custom Server Input */}
-        <div className="custom-server">
-          <input
-            type="text"
-            placeholder="https://301bc9609d7f.ngrok-free.app"
-            value={customServerUrl}
-            onChange={(e) => setCustomServerUrl(e.target.value)}
-            className="server-input"
-          />
-          <button
-            onClick={handleCustomServer}
-            className="server-button"
-            disabled={!customServerUrl}
-          >
-            Connect
-          </button>
-          <button
-            onClick={checkServerStatus}
-            className="server-button refresh"
-          >
-            Refresh
-          </button>
-        </div>
       </div>
 
       {!result && (
