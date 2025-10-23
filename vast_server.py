@@ -224,10 +224,17 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
 
 
 def create_boxes_image(image_path, boxes, output_path):
-    """Create image with bounding boxes drawn"""
+    """Create image with bounding boxes drawn using original implementation logic"""
     try:
         image = Image.open(image_path).convert('RGB')
-        draw = ImageDraw.Draw(image)
+        image_width, image_height = image.size
+
+        img_draw = image.copy()
+        draw = ImageDraw.Draw(img_draw)
+
+        # Create semi-transparent overlay (original implementation)
+        overlay = Image.new('RGBA', img_draw.size, (0, 0, 0, 0))
+        draw2 = ImageDraw.Draw(overlay)
 
         # Try to load font, fallback to default
         try:
@@ -235,13 +242,51 @@ def create_boxes_image(image_path, boxes, output_path):
         except:
             font = ImageFont.load_default()
 
-        for i, box in enumerate(boxes):
-            if len(box) >= 4:  # Ensure we have coordinates
-                x1, y1, x2, y2 = box[:4]
-                draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
-                draw.text((x1, y1-15), str(i), fill='red', font=font)
+        for i, box_info in enumerate(boxes):
+            try:
+                coordinates = box_info['coordinates']
+                label = box_info['label']
 
-        image.save(output_path)
+                if len(coordinates) == 4:
+                    x1, y1, x2, y2 = coordinates
+
+                    # Normalize coordinates from 0-999 range to actual image dimensions (original implementation)
+                    x1 = int(x1 / 999 * image_width)
+                    y1 = int(y1 / 999 * image_height)
+                    x2 = int(x2 / 999 * image_width)
+                    y2 = int(y2 / 999 * image_height)
+
+                    # Generate random color for each box (original implementation)
+                    import numpy as np
+                    color = (np.random.randint(0, 200), np.random.randint(0, 200), np.random.randint(0, 255))
+                    color_a = color + (20,)  # Semi-transparent version
+
+                    # Draw bounding box with semi-transparent fill (original implementation)
+                    draw.rectangle([x1, y1, x2, y2], outline=color, width=2)
+                    draw2.rectangle([x1, y1, x2, y2], fill=color_a, outline=(0, 0, 0, 0), width=1)
+
+                    # Add label text with background (original implementation)
+                    text_x = x1
+                    text_y = max(0, y1 - 15)
+
+                    try:
+                        text_bbox = draw.textbbox((0, 0), label, font=font)
+                        text_width = text_bbox[2] - text_bbox[0]
+                        text_height = text_bbox[3] - text_bbox[1]
+
+                        draw.rectangle([text_x, text_y, text_x + text_width, text_y + text_height],
+                                    fill=(255, 255, 255, 30))
+                        draw.text((text_x, text_y), label, font=font, fill=color)
+                    except:
+                        # Fallback if font measurement fails
+                        draw.text((text_x, text_y), label, font=font, fill=color)
+            except Exception as e:
+                print(f"Error drawing box {i}: {e}")
+                continue
+
+        # Apply the semi-transparent overlay (original implementation)
+        img_draw.paste(overlay, (0, 0), overlay)
+        img_draw.save(output_path)
         return True
     except Exception as e:
         print(f"Error creating boxes image: {e}")
@@ -249,20 +294,30 @@ def create_boxes_image(image_path, boxes, output_path):
 
 
 def extract_boxes_from_ocr(raw_text):
-    """Extract bounding boxes from <|det|> tags in OCR output"""
+    """Extract bounding boxes from <|ref|> and <|det|> tags in OCR output"""
     import re
-    import ast
 
     boxes = []
-    # Find all <|det|>[[x1, y1, x2, y2]]<|/det|> patterns
-    det_pattern = r'<\|det\|>\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]<\|/det\|>'
+    # Find all <|ref|>...</|ref|><|det|>...</|det|> patterns (original implementation)
+    pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
+    matches = re.findall(pattern, raw_text, re.DOTALL)
 
-    matches = re.findall(det_pattern, raw_text)
     for match in matches:
         try:
-            x1, y1, x2, y2 = map(int, match)
-            boxes.append([x1, y1, x2, y2])
-        except (ValueError, IndexError):
+            ref_text = match[1]  # Content between <|ref|> and <|/ref|>
+            det_text = match[2]  # Content between <|det|> and <|/det|>
+
+            # Extract coordinates from <|det|>[[x1,y1,x2,y2]]<|/det|>
+            if det_text.startswith('[[') and det_text.endswith(']]'):
+                coords_text = det_text[2:-2]  # Remove [[ and ]]
+                coords = [int(x.strip()) for x in coords_text.split(',')]
+                if len(coords) == 4:
+                    x1, y1, x2, y2 = coords
+                    boxes.append({
+                        'coordinates': [x1, y1, x2, y2],
+                        'label': ref_text if ref_text else 'text'
+                    })
+        except (ValueError, IndexError, SyntaxError):
             continue
 
     return boxes
