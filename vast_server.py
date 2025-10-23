@@ -136,6 +136,9 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
     except:
         print("Tokenizer not available in config")
 
+    # Debug: Check if this is a subsequent request
+    print(f"Processing request at timestamp: {time.time()}")
+
     try:
         # Load and process image
         image = Image.open(image_path).convert('RGB')
@@ -173,10 +176,11 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         print(f"Starting generation with request_id: {request_id}")
 
         try:
-            # Use asyncio.wait_for for timeout
-            async def generate_with_timeout():
-                printed_length = 0
-                final_output = ""
+            printed_length = 0
+            final_output = ""
+
+            # Generate with timeout
+            async def generate_ocr():
                 async for request_output in engine.generate(
                     request,
                     sampling_params,
@@ -189,12 +193,12 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
                         if new_text:
                             print(new_text, end='', flush=True)
                         printed_length = len(full_text)
+                        nonlocal final_output
                         final_output = full_text
                 print('\n')  # New line after generation completes
-                return final_output
 
             # Wait for generation with 120 second timeout
-            final_output = await asyncio.wait_for(generate_with_timeout(), timeout=120.0)
+            await asyncio.wait_for(generate_ocr(), timeout=120.0)
 
         except asyncio.TimeoutError:
             print("Generation timed out after 120 seconds")
@@ -242,6 +246,41 @@ def create_boxes_image(image_path, boxes, output_path):
     except Exception as e:
         print(f"Error creating boxes image: {e}")
         return False
+
+
+def extract_boxes_from_ocr(raw_text):
+    """Extract bounding boxes from <|det|> tags in OCR output"""
+    import re
+    import ast
+
+    boxes = []
+    # Find all <|det|>[[x1, y1, x2, y2]]<|/det|> patterns
+    det_pattern = r'<\|det\|>\[\[(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\]\]<\|/det\|>'
+
+    matches = re.findall(det_pattern, raw_text)
+    for match in matches:
+        try:
+            x1, y1, x2, y2 = map(int, match)
+            boxes.append([x1, y1, x2, y2])
+        except (ValueError, IndexError):
+            continue
+
+    return boxes
+
+
+def process_ocr_output(raw_text):
+    """Process raw OCR output to remove <|ref|> tags and clean up the markdown"""
+    import re
+
+    # Remove all <|ref|>...</|ref|> and <|det|>...</|det|> tags
+    processed = re.sub(r'<\|ref\|>.*?<\|/ref\|>', '', raw_text)
+    processed = re.sub(r'<\|det\|>.*?<\|/det\|>', '', processed)
+
+    # Clean up extra whitespace
+    processed = re.sub(r'\n\s*\n', '\n\n', processed)  # Multiple newlines to double newlines
+    processed = processed.strip()
+
+    return processed
 
 
 def image_to_base64(image_path):
@@ -297,17 +336,25 @@ def ocr_image():
         if not result['success']:
             return jsonify({'error': result['text']}), 500
 
+        # Process the raw OCR output
+        raw_result = result['text']
+        processed_markdown = process_ocr_output(raw_result)
+
+        # Extract bounding boxes from OCR output
+        boxes = extract_boxes_from_ocr(raw_result)
+
         # Create boxes image if boxes are available
         boxes_image_base64 = ""
-        if result['boxes']:
+        if boxes:
             boxes_filename = f"boxes_{timestamp}.jpg"
             boxes_path = OUTPUT_FOLDER / boxes_filename
-            if create_boxes_image(image_path, result['boxes'], boxes_path):
+            if create_boxes_image(image_path, boxes, boxes_path):
                 boxes_image_base64 = image_to_base64(boxes_path)
 
         return jsonify({
             'success': True,
-            'markdown': result['text'],
+            'raw_result': raw_result,  # Original OCR output with <|ref|> tags
+            'markdown': processed_markdown,  # Clean markdown without <|ref|> tags
             'boxes_image': boxes_image_base64,
             'image_name': image_filename
         })

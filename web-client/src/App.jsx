@@ -260,13 +260,15 @@ function App() {
               <img src={previewUrl} alt="Original" />
             </div>
 
-            <div className="preview-image">
-              <h3>
-                <FileText size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                Image with Bounding Boxes
-              </h3>
-              <img src={result.image_with_boxes} alt="With bounding boxes" />
-            </div>
+            {result.boxes_image && (
+              <div className="preview-image">
+                <h3>
+                  <FileText size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                  Image with Bounding Boxes
+                </h3>
+                <img src={`data:image/jpeg;base64,${result.boxes_image}`} alt="With bounding boxes" />
+              </div>
+            )}
           </div>
 
           <div className="result-section">
@@ -283,39 +285,28 @@ function App() {
               >
                 Source Markdown
               </button>
+              <button
+                className={`tab ${activeTab === 'raw' ? 'active' : ''}`}
+                onClick={() => setActiveTab('raw')}
+              >
+                Raw OCR Output
+              </button>
             </div>
 
             {activeTab === 'rendered' ? (
               <div className="markdown-content">
                 <ReactMarkdown>{result.markdown}</ReactMarkdown>
               </div>
-            ) : (
+            ) : activeTab === 'source' ? (
               <div className="markdown-source">
-                {result.original_markdown}
+                {result.markdown}
+              </div>
+            ) : (
+              <div className="markdown-raw">
+                <pre>{result.raw_result}</pre>
               </div>
             )}
 
-            {result.extracted_images && result.extracted_images.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <h4>Extracted Images:</h4>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  {result.extracted_images.map((url, index) => (
-                    <img
-                      key={index}
-                      src={url}
-                      alt={`Extracted ${index}`}
-                      style={{
-                        width: '100px',
-                        height: '100px',
-                        objectFit: 'cover',
-                        borderRadius: '5px',
-                        border: '1px solid #ddd'
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
               <button className="button" onClick={resetForm}>
