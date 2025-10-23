@@ -125,7 +125,7 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
 
     try:
         # Create processor instance (not global)
-        processor = DeepSeekOCRProcessor.from_pretrained(str(MODEL_PATH))
+        processor = DeepseekOCRProcessor.from_pretrained(str(MODEL_PATH))
 
         # Load and process image
         image = Image.open(image_path).convert('RGB')
