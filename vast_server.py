@@ -11,6 +11,7 @@ import asyncio
 import base64
 import io
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -152,9 +153,11 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         )
 
         # Generate response
+        request_id = f"request-{int(time.time())}"
         result_generator = engine.generate(
             request,
-            sampling_params
+            sampling_params,
+            request_id
         )
 
         # Get the result
