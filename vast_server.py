@@ -124,34 +124,37 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
         }
 
     try:
-        # Create processor instance (not global)
-        processor = DeepseekOCRProcessor.from_pretrained(str(MODEL_PATH))
-
         # Load and process image
         image = Image.open(image_path).convert('RGB')
 
-        # Prepare inputs
-        inputs = processor.process_image(
-            images=image,
-            text=prompt,
-            return_tensors='pt',
-            crop_mode=crop_mode
-        )
+        # Prepare inputs using the correct method from official code
+        if '<image>' in prompt:
+            image_features = DeepseekOCRProcessor().tokenize_with_images(
+                images=[image],
+                bos=True,
+                eos=True,
+                cropping=crop_mode
+            )
+            request = {
+                "prompt": prompt,
+                "multi_modal_data": {"image": image_features}
+            }
+        else:
+            request = {
+                "prompt": prompt
+            }
 
         # Prepare sampling parameters
         sampling_params = SamplingParams(
             temperature=0.0,
             top_p=1.0,
-            max_tokens=4096,
-            stop_token_ids=[processor.tokenizer.eos_token_id]
+            max_tokens=4096
         )
 
         # Generate response
         result_generator = engine.generate(
-            prompt=None,
-            sampling_params=sampling_params,
-            prompt_token_ids=inputs['input_ids'],
-            multi_modal_data=inputs['multi_modal_data']
+            request,
+            sampling_params
         )
 
         # Get the result
