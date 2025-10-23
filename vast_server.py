@@ -49,6 +49,7 @@ except ImportError as e:
 try:
     from deepseek_ocr import DeepseekOCRForCausalLM
     from process.image_process import DeepseekOCRProcessor
+    from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
     OCR_AVAILABLE = True
     print("✓ DeepSeek OCR modules imported successfully")
 except ImportError as e:
@@ -99,10 +100,12 @@ def initialize_model():
         engine_args = AsyncEngineArgs(
             model=str(MODEL_PATH),
             hf_overrides={"architectures": ["DeepseekOCRForCausalLM"]},
+            block_size=256,
+            max_model_len=8192,
+            enforce_eager=False,
             trust_remote_code=True,
             tensor_parallel_size=1,
             gpu_memory_utilization=0.75,
-            dtype='auto',  # Let vLLM choose optimal dtype for GPU
         )
         engine = AsyncLLMEngine.from_engine_args(engine_args)
 
@@ -123,6 +126,15 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
             'success': False,
             'error': 'Model engine not initialized'
         }
+
+    print(f"Engine available: {engine is not None}")
+
+    # Test if model is actually loaded by checking tokenizer
+    try:
+        from config import TOKENIZER
+        print(f"Tokenizer available: {TOKENIZER is not None}")
+    except:
+        print("Tokenizer not available in config")
 
     try:
         # Load and process image
@@ -145,12 +157,15 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
                 "prompt": prompt
             }
 
-        # Prepare sampling parameters
+        # Prepare sampling parameters with logits processor
+        logits_processors = [NoRepeatNGramLogitsProcessor(ngram_size=30, window_size=90, whitelist_token_ids={128821, 128822})]
         sampling_params = SamplingParams(
             temperature=0.0,
             top_p=1.0,
             max_tokens=4096,
-            timeout=120.0  # 2 minute timeout to prevent hanging
+            timeout=120.0,  # 2 minute timeout to prevent hanging
+            logits_processors=logits_processors,
+            skip_special_tokens=False
         )
 
         # Generate response
@@ -169,9 +184,13 @@ async def process_image_async(image_path, prompt=PROMPT, crop_mode=CROP_MODE):
             ):
                 if request_output.outputs:
                     full_text = request_output.outputs[0].text
+                    # Stream the output like official code
+                    new_text = full_text[printed_length:]
+                    if new_text:
+                        print(new_text, end='', flush=True)
+                    printed_length = len(full_text)
                     final_output = full_text
-                    print(f"Generated text length: {len(full_text)}")
-                    print(f"Generated text preview: {full_text[:100]}...")
+            print('\n')  # New line after generation completes
         except Exception as e:
             print(f"Error during generation: {e}")
             return {'text': f'Generation error: {str(e)}', 'boxes': [], 'success': False}
@@ -256,14 +275,16 @@ def ocr_image():
 
         print(f"Processing image: {image_filename}")
 
-        # Process image
+        # Process image with proper async task management
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        result = loop.run_until_complete(process_image_async(image_path))
+        # Run the async task and ensure it completes
+        task = loop.create_task(process_image_async(image_path))
+        result = loop.run_until_complete(task)
 
         if not result['success']:
             return jsonify({'error': result['text']}), 500
