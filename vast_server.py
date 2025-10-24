@@ -418,7 +418,7 @@ def process_ocr_output(raw_text):
 
 def process_ocr_for_rendering(raw_text, image_filename=None):
     """Process OCR output specifically for rendered HTML view
-    This version preserves image references and handles line breaks"""
+    This version preserves image references with proper <img> tags and handles line breaks"""
     import re
 
     # Extract image references using official implementation
@@ -427,43 +427,21 @@ def process_ocr_for_rendering(raw_text, image_filename=None):
     # Start with the raw text
     processed = raw_text
 
-    # Replace image references with proper HTML <img> elements
+    # Replace image references with proper HTML <img> tags
     for idx, a_match_image in enumerate(matches_images):
-        # Extract coordinates from <|det|> section to calculate image dimensions
-        if image_filename:
-            try:
-                image_path = OUTPUT_FOLDER / "uploads" / image_filename
-                image = Image.open(image_path).convert('RGB')
-                image_width, image_height = image.size
-
-                # Extract coordinates from the image match
-                result = extract_coordinates_and_label(a_match_image, image_width, image_height)
-                if result:
-                    label_type, points_list = result
-                    if label_type == 'image' and points_list:
-                        # Calculate dimensions from the first set of coordinates
-                        x1, y1, x2, y2 = points_list[0]
-
-                        # Normalize coordinates from 0-999 range to actual image dimensions
-                        x1_norm = int(x1 / 999 * image_width)
-                        y1_norm = int(y1 / 999 * image_height)
-                        x2_norm = int(x2 / 999 * image_width)
-                        y2_norm = int(y2 / 999 * image_height)
-
-                        # Calculate actual width and height
-                        img_width = x2_norm - x1_norm
-                        img_height = y2_norm - y1_norm
-
-                        # Generate proper HTML <img> element with dimensions
-                        img_html = f'<img src="/images/{idx}.jpg" width="{img_width}" height="{img_height}" />'
-                        processed = processed.replace(a_match_image, img_html + '<br>')
-                        continue
-            except Exception as e:
-                print(f"Error extracting image dimensions for image {idx}: {e}")
-
-        # Fallback: if we can't extract dimensions, use default HTML without dimensions
-        img_html = f'<img src="/images/{idx}.jpg" />'
-        processed = processed.replace(a_match_image, img_html + '<br>')
+        # Extract coordinates from the image reference
+        result = extract_coordinates_and_label(a_match_image, 1000, 1000)  # Use dummy dimensions for calculation
+        if result:
+            label_type, coords_list = result
+            if label_type == 'image' and coords_list:
+                # Get the first bounding box coordinates
+                x1, y1, x2, y2 = coords_list[0]
+                # Calculate width and height from coordinates
+                width = x2 - x1
+                height = y2 - y1
+                # Create proper HTML img tag with server URL and dimensions
+                img_tag = f'<img src="http://localhost:5000/images/{idx}.jpg" width="{width}" height="{height}" alt="Extracted image"><br>'
+                processed = processed.replace(a_match_image, img_tag)
 
     # Remove other <|ref|> and <|det|> tags (non-image)
     for a_match_other in matches_other:

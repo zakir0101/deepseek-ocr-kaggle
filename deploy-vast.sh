@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SSH_PORT="25922"
-SSH_HOST="root@ssh8.vast.ai"
+SSH_PORT="15594"
+SSH_HOST="root@ssh9.vast.ai"
 REMOTE_DIR="/opt/workspace-internal/DeepSeek-OCR-vllm"
 LOCAL_DIR="/mnt/wsl/projects/deepseek-ocr/DeepSeek-OCR-master/DeepSeek-OCR-vllm"
 
