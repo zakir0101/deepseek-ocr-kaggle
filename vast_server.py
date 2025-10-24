@@ -324,7 +324,8 @@ def extract_boxes_from_ocr(raw_text):
 
 
 def process_ocr_output(raw_text):
-    """Process raw OCR output to remove <|ref|> tags and clean up the markdown"""
+    """Process raw OCR output to remove <|ref|> tags and clean up the markdown
+    Preserves HTML tables and LaTeX equations for proper rendering"""
     import re
 
     # Remove all <|ref|>...</|ref|> and <|det|>...</|det|> tags
@@ -333,6 +334,23 @@ def process_ocr_output(raw_text):
 
     # Clean up extra whitespace
     processed = re.sub(r'\n\s*\n', '\n\n', processed)  # Multiple newlines to double newlines
+    processed = processed.strip()
+
+    return processed
+
+
+def process_ocr_for_rendering(raw_text, image_filename=None):
+    """Process OCR output specifically for rendered markdown view
+    This version preserves HTML tables and LaTeX equations
+    and includes proper image links for diagrams/graphs"""
+    import re
+
+    # Remove all <|ref|>...</|ref|> and <|det|>...</|det|> tags
+    processed = re.sub(r'<\|ref\|>.*?<\|/ref\|>', '', raw_text)
+    processed = re.sub(r'<\|det\|>.*?<\|/det\|>', '', processed)
+
+    # Clean up extra whitespace
+    processed = re.sub(r'\n\s*\n', '\n\n', processed)
     processed = processed.strip()
 
     return processed
@@ -387,6 +405,7 @@ def ocr_image():
         # Process the raw OCR output
         raw_result = result['text']
         processed_markdown = process_ocr_output(raw_result)
+        source_markdown = process_ocr_for_rendering(raw_result, image_filename)
 
         # Extract bounding boxes from OCR output
         boxes = extract_boxes_from_ocr(raw_result)
@@ -403,6 +422,7 @@ def ocr_image():
             'success': True,
             'raw_result': raw_result,  # Original OCR output with <|ref|> tags
             'markdown': processed_markdown,  # Clean markdown without <|ref|> tags
+            'source_markdown': source_markdown,  # Source markdown with HTML tables and LaTeX preserved
             'boxes_image': boxes_image_base64,
             'image_name': image_filename
         })

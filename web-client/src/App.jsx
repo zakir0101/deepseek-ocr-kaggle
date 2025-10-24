@@ -211,18 +211,12 @@ function App() {
           />
 
           {previewUrl && (
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div className="preview-container">
               <h4>Preview:</h4>
               <img
                 src={previewUrl}
                 alt="Preview"
-                style={{
-                  maxWidth: '300px',
-                  maxHeight: '300px',
-                  margin: '10px auto',
-                  borderRadius: '5px',
-                  border: '1px solid #ddd'
-                }}
+                className="preview-image-upload"
               />
               <button
                 className="button"
@@ -295,7 +289,53 @@ function App() {
 
             {activeTab === 'rendered' ? (
               <div className="markdown-content">
-                <ReactMarkdown>{result.markdown}</ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    // Preserve HTML tables
+                    table: ({node, ...props}) => (
+                      <div style={{overflowX: 'auto'}}>
+                        <table {...props} />
+                      </div>
+                    ),
+                    // Style tables properly
+                    th: ({node, ...props}) => (
+                      <th {...props} style={{
+                        border: '1px solid #ddd',
+                        padding: '8px',
+                        backgroundColor: '#f2f2f2',
+                        textAlign: 'left'
+                      }} />
+                    ),
+                    td: ({node, ...props}) => (
+                      <td {...props} style={{
+                        border: '1px solid #ddd',
+                        padding: '8px'
+                      }} />
+                    ),
+                    // Preserve LaTeX equations (display as code)
+                    code: ({node, inline, ...props}) => {
+                      const content = props.children?.[0] || '';
+                      // Check if it's likely a LaTeX equation
+                      if (typeof content === 'string' && (content.includes('\\') || content.includes('$'))) {
+                        return (
+                          <code
+                            {...props}
+                            style={{
+                              backgroundColor: '#f8f9fa',
+                              padding: '2px 4px',
+                              borderRadius: '3px',
+                              fontFamily: 'monospace',
+                              fontSize: '0.9em'
+                            }}
+                          />
+                        );
+                      }
+                      return <code {...props} />;
+                    }
+                  }}
+                >
+                  {result.markdown}
+                </ReactMarkdown>
               </div>
             ) : activeTab === 'source' ? (
               <div className="markdown-source">
