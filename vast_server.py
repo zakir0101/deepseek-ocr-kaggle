@@ -341,13 +341,43 @@ def process_ocr_output(raw_text):
 
 def process_ocr_for_rendering(raw_text, image_filename=None):
     """Process OCR output specifically for rendered markdown view
-    This version preserves HTML tables and LaTeX equations
-    and includes proper image links for diagrams/graphs"""
+    This version converts HTML tables to markdown and preserves image references"""
     import re
 
     # Remove all <|ref|>...</|ref|> and <|det|>...</|det|> tags
     processed = re.sub(r'<\|ref\|>.*?<\|/ref\|>', '', raw_text)
     processed = re.sub(r'<\|det\|>.*?<\|/det\|>', '', processed)
+
+    # Convert HTML tables to markdown format
+    def html_table_to_markdown(html_table):
+        # Parse table rows
+        rows = re.findall(r'<tr>(.*?)</tr>', html_table, re.DOTALL)
+        markdown_rows = []
+
+        for i, row in enumerate(rows):
+            # Extract cells
+            cells = re.findall(r'<td>(.*?)</td>', row, re.DOTALL)
+            if not cells:
+                continue
+
+            # Create markdown row
+            markdown_row = '| ' + ' | '.join(cell.strip() for cell in cells) + ' |'
+            markdown_rows.append(markdown_row)
+
+            # Add header separator after first row
+            if i == 0:
+                separator = '| ' + ' | '.join(['---'] * len(cells)) + ' |'
+                markdown_rows.append(separator)
+
+        return '\n'.join(markdown_rows)
+
+    # Replace HTML tables with markdown tables
+    processed = re.sub(
+        r'<table>(.*?)</table>',
+        lambda match: html_table_to_markdown(match.group(0)),
+        processed,
+        flags=re.DOTALL
+    )
 
     # Clean up extra whitespace
     processed = re.sub(r'\n\s*\n', '\n\n', processed)
