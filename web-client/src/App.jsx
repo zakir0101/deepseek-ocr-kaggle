@@ -59,6 +59,16 @@ function App() {
     checkServerStatus()
   }, [])
 
+  // Process MathJax equations when result changes
+  useEffect(() => {
+    if (result && activeTab === 'rendered' && window.MathJax) {
+      // Give the DOM time to update, then process MathJax
+      setTimeout(() => {
+        window.MathJax.typesetPromise && window.MathJax.typesetPromise();
+      }, 100)
+    }
+  }, [result, activeTab])
+
   const checkServerStatus = async () => {
     try {
       const healthUrl = getApiUrl('health')
@@ -288,31 +298,10 @@ function App() {
             </div>
 
             {activeTab === 'rendered' ? (
-              <div className="markdown-content">
-                <ReactMarkdown
-                  components={{
-                    // MathJax will handle LaTeX equations automatically
-                    // Style code blocks
-                    code: ({node, inline, ...props}) => {
-                      const content = props.children?.[0] || '';
-                      return (
-                        <code
-                          {...props}
-                          style={{
-                            backgroundColor: '#f8f9fa',
-                            padding: '2px 4px',
-                            borderRadius: '3px',
-                            fontFamily: 'Courier New, monospace',
-                            fontSize: '0.9em'
-                          }}
-                        />
-                      );
-                    }
-                  }}
-                >
-                  {result.source_markdown}
-                </ReactMarkdown>
-              </div>
+              <div
+                className="markdown-content"
+                dangerouslySetInnerHTML={{ __html: result.source_markdown }}
+              />
             ) : activeTab === 'source' ? (
               <div className="markdown-source">
                 {result.markdown}

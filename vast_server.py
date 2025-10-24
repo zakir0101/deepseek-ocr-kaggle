@@ -348,39 +348,6 @@ def process_ocr_for_rendering(raw_text, image_filename=None):
     processed = re.sub(r'<\|ref\|>.*?<\|/ref\|>', '', raw_text)
     processed = re.sub(r'<\|det\|>.*?<\|/det\|>', '', processed)
 
-    # Convert HTML tables to markdown format
-    def html_table_to_markdown(html_table):
-        # Parse table rows
-        rows = re.findall(r'<tr>(.*?)</tr>', html_table, re.DOTALL)
-        markdown_rows = []
-
-        for i, row in enumerate(rows):
-            # Extract cells - handle both <td> and <th> tags
-            cells = re.findall(r'<(?:td|th)>(.*?)</(?:td|th)>', row, re.DOTALL)
-            if not cells:
-                continue
-
-            # Clean and process cell content
-            processed_cells = []
-            for cell in cells:
-                # Remove extra whitespace and newlines
-                cleaned = re.sub(r'\s+', ' ', cell.strip())
-                # Handle empty cells
-                if not cleaned:
-                    cleaned = ' '
-                processed_cells.append(cleaned)
-
-            # Create markdown row
-            markdown_row = '| ' + ' | '.join(processed_cells) + ' |'
-            markdown_rows.append(markdown_row)
-
-            # Add header separator after first row
-            if i == 0:
-                separator = '| ' + ' | '.join(['---'] * len(cells)) + ' |'
-                markdown_rows.append(separator)
-
-        return '\n'.join(markdown_rows) if markdown_rows else ''
-
     # Convert HTML image tags to markdown format
     def html_image_to_markdown(html_img):
         # Extract src and alt attributes
@@ -392,14 +359,6 @@ def process_ocr_for_rendering(raw_text, image_filename=None):
 
         # Convert to markdown format
         return f'![{alt}]({src})'
-
-    # Replace HTML tables with markdown tables
-    processed = re.sub(
-        r'<table>(.*?)</table>',
-        lambda match: html_table_to_markdown(match.group(0)),
-        processed,
-        flags=re.DOTALL
-    )
 
     # Replace HTML image tags with markdown format
     processed = re.sub(
