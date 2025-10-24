@@ -293,6 +293,83 @@ def create_boxes_image(image_path, boxes, output_path):
         return False
 
 
+def re_match(text):
+    """Extract <|ref|> and <|det|> tags from OCR output (official implementation)"""
+    import re
+
+    pattern = r'(<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>)'
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    matches_image = []
+    matches_other = []
+    for a_match in matches:
+        if '<|ref|>image<|/ref|>' in a_match[0]:
+            matches_image.append(a_match[0])
+        else:
+            matches_other.append(a_match[0])
+    return matches, matches_image, matches_other
+
+
+def extract_coordinates_and_label(ref_text, image_width, image_height):
+    """Extract coordinates and label from <|ref|> and <|det|> tags (official implementation)"""
+    import re
+
+    try:
+        # Extract the pattern: <|ref|>label<|/ref|><|det|>[[x1,y1,x2,y2]]<|/det|>
+        pattern = r'<\|ref\|>(.*?)<\|/ref\|><\|det\|>(.*?)<\|/det\|>'
+        match = re.search(pattern, ref_text, re.DOTALL)
+        if match:
+            label_type = match.group(1)
+            coords_text = match.group(2)
+
+            # Extract coordinates from [[x1,y1,x2,y2]]
+            if coords_text.startswith('[[') and coords_text.endswith(']]'):
+                coords_list = eval(coords_text)
+                return (label_type, coords_list)
+    except Exception as e:
+        print(f"Error extracting coordinates: {e}")
+        return None
+
+    return None
+
+
+def crop_and_save_images(image_path, matches_images, output_folder):
+    """Crop and save images from bounding boxes (official implementation)"""
+    try:
+        image = Image.open(image_path).convert('RGB')
+        image_width, image_height = image.size
+
+        # Create images directory
+        images_dir = output_folder / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, match_image in enumerate(matches_images):
+            result = extract_coordinates_and_label(match_image, image_width, image_height)
+            if result:
+                label_type, points_list = result
+                if label_type == 'image':
+                    for points in points_list:
+                        x1, y1, x2, y2 = points
+
+                        # Normalize coordinates from 0-999 range to actual image dimensions
+                        x1 = int(x1 / 999 * image_width)
+                        y1 = int(y1 / 999 * image_height)
+                        x2 = int(x2 / 999 * image_width)
+                        y2 = int(y2 / 999 * image_height)
+
+                        try:
+                            cropped = image.crop((x1, y1, x2, y2))
+                            cropped.save(images_dir / f"{idx}.jpg")
+                        except Exception as e:
+                            print(f"Error cropping image {idx}: {e}")
+                            continue
+
+        return True
+    except Exception as e:
+        print(f"Error in crop_and_save_images: {e}")
+        return False
+
+
 def extract_boxes_from_ocr(raw_text):
     """Extract bounding boxes from <|ref|> and <|det|> tags in OCR output"""
     import re
@@ -341,35 +418,29 @@ def process_ocr_output(raw_text):
 
 def process_ocr_for_rendering(raw_text, image_filename=None):
     """Process OCR output specifically for rendered markdown view
-    This version converts HTML tables to markdown and preserves image references"""
+    This version preserves image references and handles line breaks"""
     import re
 
-    # Remove all <|ref|>...</|ref|> and <|det|>...</|det|> tags
-    processed = re.sub(r'<\|ref\|>.*?<\|/ref\|>', '', raw_text)
-    processed = re.sub(r'<\|det\|>.*?<\|/det\|>', '', processed)
+    # Extract image references using official implementation
+    matches_ref, matches_images, matches_other = re_match(raw_text)
 
-    # Convert HTML image tags to markdown format
-    def html_image_to_markdown(html_img):
-        # Extract src and alt attributes
-        src_match = re.search(r'src="([^"]*)"', html_img)
-        alt_match = re.search(r'alt="([^"]*)"', html_img)
+    # Start with the raw text
+    processed = raw_text
 
-        src = src_match.group(1) if src_match else ''
-        alt = alt_match.group(1) if alt_match else 'image'
+    # Replace image references with markdown image syntax
+    for idx, a_match_image in enumerate(matches_images):
+        processed = processed.replace(a_match_image, f'![](images/{idx}.jpg)\n')
 
-        # Convert to markdown format
-        return f'![{alt}]({src})'
+    # Remove other <|ref|> and <|det|> tags (non-image)
+    for a_match_other in matches_other:
+        processed = processed.replace(a_match_other, '')
 
-    # Replace HTML image tags with markdown format
-    processed = re.sub(
-        r'<img[^>]*>',
-        lambda match: html_image_to_markdown(match.group(0)),
-        processed,
-        flags=re.DOTALL
-    )
-
-    # Clean up extra whitespace
+    # Clean up extra whitespace and handle line breaks for HTML rendering
     processed = re.sub(r'\n\s*\n', '\n\n', processed)
+
+    # Convert newlines to <br> tags for proper HTML rendering
+    processed = processed.replace('\n', '<br>')
+
     processed = processed.strip()
 
     return processed
@@ -423,7 +494,18 @@ def ocr_image():
 
         # Process the raw OCR output
         raw_result = result['text']
+
+        # Extract image references and crop images
+        matches_ref, matches_images, matches_other = re_match(raw_result)
+
+        # Crop and save images from bounding boxes
+        if matches_images:
+            crop_and_save_images(image_path, matches_images, OUTPUT_FOLDER)
+
+        # Process markdown output (clean version without <|ref|> tags)
         processed_markdown = process_ocr_output(raw_result)
+
+        # Process for rendered view (with image references and line breaks)
         source_markdown = process_ocr_for_rendering(raw_result, image_filename)
 
         # Extract bounding boxes from OCR output
@@ -460,6 +542,19 @@ def serve_image(image_name):
             return send_file(image_path, mimetype='image/jpeg')
         else:
             return jsonify({'error': 'Image not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/images/<image_id>.jpg', methods=['GET'])
+def serve_cropped_image(image_id):
+    """Serve cropped images from OCR processing"""
+    try:
+        image_path = OUTPUT_FOLDER / "images" / f"{image_id}.jpg"
+        if image_path.exists():
+            return send_file(image_path, mimetype='image/jpeg')
+        else:
+            return jsonify({'error': 'Cropped image not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
