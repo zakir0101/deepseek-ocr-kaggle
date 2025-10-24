@@ -291,32 +291,7 @@ function App() {
               <div className="markdown-content">
                 <ReactMarkdown
                   components={{
-                    // Convert LaTeX equations to proper format
-                    text: ({node, ...props}) => {
-                      const content = props.children?.[0] || '';
-                      if (typeof content === 'string') {
-                        // Convert LaTeX equations with backslash to proper format
-                        let processed = content;
-
-                        // Convert \( ... \) to $ ... $
-                        processed = processed.replace(/\\\(/g, '$').replace(/\\\)/g, '$');
-
-                        // Convert \[ ... \] to $$ ... $$
-                        processed = processed.replace(/\\\[/g, '$$').replace(/\\\]/g, '$$');
-
-                        // Convert \mathrm{...} to text
-                        processed = processed.replace(/\\mathrm\{([^}]*)\}/g, '$1');
-
-                        // Convert \leqslant to ≤
-                        processed = processed.replace(/\\leqslant/g, '≤');
-
-                        // Convert ^{3} to ^3
-                        processed = processed.replace(/\^\{([^}]*)\}/g, '^$1');
-
-                        return <span>{processed}</span>;
-                      }
-                      return <span {...props} />;
-                    },
+                    // MathJax will handle LaTeX equations automatically
                     // Style code blocks
                     code: ({node, inline, ...props}) => {
                       const content = props.children?.[0] || '';
@@ -335,7 +310,7 @@ function App() {
                     }
                   }}
                 >
-                  {result.markdown}
+                  {result.source_markdown}
                 </ReactMarkdown>
               </div>
             ) : activeTab === 'source' ? (
