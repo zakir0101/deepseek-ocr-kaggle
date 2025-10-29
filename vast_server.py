@@ -18,8 +18,8 @@ from datetime import datetime
 # Set vLLM to use legacy API (compatible with DeepSeek OCR)
 os.environ['VLLM_USE_V1'] = '0'
 
-# Vast.ai workspace paths
-WORKSPACE = Path("/home/zakir/deepseek-ocr-kaggle")
+# Use relative paths for local development
+WORKSPACE = Path(".")
 MODEL_PATH = WORKSPACE / "models" / "deepseek-ocr"
 UPLOAD_FOLDER = WORKSPACE / "uploads"
 OUTPUT_FOLDER = WORKSPACE / "outputs"
@@ -585,27 +585,6 @@ def index():
     })
 
 
-def start_ngrok():
-    """Start ngrok tunnel and print URL"""
-    try:
-        from pyngrok import ngrok
-
-        # Create HTTP tunnel
-        tunnel = ngrok.connect(5000, "http")
-        public_url = tunnel.public_url
-
-        print("\n" + "=" * 50)
-        print("NGROK PUBLIC URL:")
-        print(public_url)
-        print("=" * 50)
-        print("\nCopy this URL to access your server from anywhere!")
-
-        return public_url
-    except Exception as e:
-        print(f"✗ Ngrok tunnel failed: {e}")
-        return None
-
-
 def main():
     """Main server startup"""
     # Create necessary directories
@@ -618,15 +597,10 @@ def main():
     if engine is None:
         print("⚠ Model not initialized - server will start but OCR functionality will be limited")
 
-    # Start ngrok tunnel
-    ngrok_url = start_ngrok()
-
     print("\n" + "=" * 50)
     print("DeepSeek OCR Server - Vast.ai")
     print("=" * 50)
     print(f"Server running on: http://localhost:5000")
-    if ngrok_url:
-        print(f"Public access: {ngrok_url}")
     print("=" * 50)
     print("\nEndpoints:")
     print("  GET  /health     - Health check")

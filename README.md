@@ -5,7 +5,7 @@ A production-ready OCR server using DeepSeek's multimodal model for document tex
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Vast.ai account with GPU credits
+- Vast.ai account with GPU credits (NVIDIA RTX 3090 or better recommended)
 - SSH access configured
 - Git repository access
 
@@ -48,7 +48,7 @@ A production-ready OCR server using DeepSeek's multimodal model for document tex
 ### Server Components
 - **Flask Backend**: REST API server on port 5000
 - **vLLM Engine**: Async model inference with DeepSeek-OCR
-- **Frontend**: React web interface on port 8080
+- **Frontend**: React web interface on port 3000
 - **File Management**: Upload and output directories
 
 ### Model Information
@@ -63,14 +63,6 @@ A production-ready OCR server using DeepSeek's multimodal model for document tex
 - `GET /health` - Health check and model status
 - `POST /ocr/image` - OCR processing endpoint
 - `GET /image/<filename>` - Serve uploaded images
-
-### Environment Variables
-```bash
-VLLM_USE_V1=0  # Legacy vLLM API compatibility
-MODEL_PATH=/home/zakir/deepseek-ocr-kaggle/models/deepseek-ocr
-UPLOAD_FOLDER=/home/zakir/deepseek-ocr-kaggle/uploads
-OUTPUT_FOLDER=/home/zakir/deepseek-ocr-kaggle/outputs
-```
 
 ## 📁 Project Structure
 
@@ -93,19 +85,23 @@ deepseek-ocr-vastai/
 ## 🛠️ Development
 
 ### Local Development
-1. **Install dependencies**:
+1. **Download the model**:
+   ```bash
+   git clone https://huggingface.co/deepseek-ai/DeepSeek-OCR models/deepseek-ocr
+   ```
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Start server**:
+3. **Start server**:
    ```bash
    python3 vast_server.py
    ```
 
-3. **Access endpoints**:
+4. **Access endpoints**:
    - Server: http://localhost:5000
-   - Frontend: http://localhost:8080
+   - Frontend: http://localhost:3000
 
 ### Frontend Development
 ```bash
@@ -154,7 +150,7 @@ curl -X POST -F "image=@test_image.jpg" http://localhost:5000/ocr/image
 Check server logs for detailed error information:
 ```bash
 # On the server
-tail -f /home/zakir/deepseek-ocr-kaggle/server.log
+tail -f backend.log
 ```
 
 ## 📊 Performance
@@ -205,6 +201,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Last Updated**: 2025-10-23
+**Last Updated**: 2025-10-29
 **Server Status**: ✅ Running on Vast.ai
 **Model Status**: ✅ Loaded and functional

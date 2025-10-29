@@ -7,3 +7,6 @@ easydict
 addict 
 Pillow
 numpy
+vllm==0.8.5
+flask==2.3.3
+flask-cors==4.0.0
